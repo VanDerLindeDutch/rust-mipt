@@ -11,20 +11,11 @@ pub fn derive_scan(input: TokenStream) -> TokenStream {
         Data::Struct(s) => {s}
         _ => panic!()
     };
-    let mut gen = quote! {
-        impl Scan for #name {
-            fn hello_macro() {
-                println!("Hello, Macro! My name is {}!", stringify!(#name));
-            }
-        }
-    };
     let mut to_scan = vec![];
     match struct_.fields {
         Fields::Named(ref fields) => {
-            let mut acc = 0;
             fields.named.iter().for_each(|x|{
-                let t = &x.ty;
-                match t {
+                match &x.ty {
                     Type::Path(p) => {
                         if contains_gc(p) {
                             to_scan.push(&x.ident)
@@ -35,16 +26,9 @@ pub fn derive_scan(input: TokenStream) -> TokenStream {
                 }
             })
         }
-        Fields::Unnamed(_) => {gen = quote! {
-                            trait
-                        };}
-        Fields::Unit => {}
+        _ => {}
     }
-    let v = to_scan.iter().map(|name| {
-
-    });
-
-    gen = quote! {
+    let gen = quote! {
         impl Scan for #name {
             fn scan(&self, prev: &mut HashSet<usize>)->Vec<Gc<dyn Scan>>{
                 let mut out = vec![];
@@ -83,7 +67,4 @@ fn contains_gc(path: &TypePath)->bool {
         };
         x.ident.to_string().eq(&gc_type) || rest
     })
-}
-fn parse_path_type(path: &TypePath) {
-
 }
