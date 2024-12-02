@@ -8,12 +8,13 @@ mod flags;
 
 use crate::bit_reader::BitReader;
 use crate::deflate::{DeflateReader};
-use anyhow::Result;
+use anyhow::{bail, Result};
 use byteorder::ReadBytesExt;
 
 use std::fmt::Write;
 use std::io::BufRead;
 use crate::gzip::header::CompressionMethod;
+use crate::tracking_writer::TrackingWriter;
 
 const ID1: u8 = 0x1f;
 const ID2: u8 = 0x8b;
@@ -27,7 +28,7 @@ const FNAME_OFFSET: u8 = 3;
 const FCOMMENT_OFFSET: u8 = 4;
 
 pub trait Decoder<T: BufRead, I: std::io::Write> {
-    fn decode(&mut self, _: BitReader<T>, _: I) -> Result<()>;
+    fn decode(&mut self, _: &mut BitReader<T>, _: &mut TrackingWriter<I>) -> Result<()>;
 }
 pub struct GzipReader<T, I> {
     reader: BitReader<T>,
@@ -42,10 +43,12 @@ impl<T: BufRead, I: std::io::Write> GzipReader<T, I> {
 
     pub fn decode(mut self, writer: I) -> Result<()> {
         let header = self.parse_header()?;
+        let mut tracking_writer = TrackingWriter::new(writer);
         match header.0.compression_method {
-            CompressionMethod::Deflate => { self.decoder.decode(self.reader, writer) }
-            CompressionMethod::Unknown(v) => { unimplemented!() }
+            CompressionMethod::Deflate => { self.decoder.decode(&mut self.reader, &mut tracking_writer)?; }
+            CompressionMethod::Unknown(v) => { bail!("unsupported compression method") }
         }
+        self.parse_footer(tracking_writer.byte_count(), tracking_writer.crc32() )
     }
 
 }

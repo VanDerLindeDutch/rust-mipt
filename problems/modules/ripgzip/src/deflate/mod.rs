@@ -2,8 +2,6 @@
 
 mod huffman_coding;
 
-mod tracking_writer;
-
 pub mod reader;
 
 pub use reader::DeflateReader;
@@ -15,7 +13,7 @@ use std::{
     convert::TryFrom,
     io::{BufRead, Write},
 };
-use tracking_writer::TrackingWriter;
+use crate::tracking_writer::TrackingWriter;
 
 #[derive(Debug)]
 struct BlockHeader {
@@ -36,11 +34,10 @@ enum CompressionType {
 
 
 impl<T: BufRead, I: Write> gzip::Decoder<T, I> for DeflateReader {
-    fn decode(&mut self, mut reader: BitReader<T>,
-              writer: I) -> Result<()> {
-        let mut tracking_writer = TrackingWriter::new(writer);
-        while !self.read_block(&mut reader, &mut tracking_writer)? {}
-        tracking_writer.flush()?;
+    fn decode(&mut self, reader: &mut BitReader<T>,
+              tracking_writer: &mut TrackingWriter<I>) -> Result<()> {
+
+        while !self.read_block(reader, tracking_writer)? {}
         Ok(())
     }
 }

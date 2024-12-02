@@ -22,8 +22,8 @@ struct Opts {
 fn main() {
    /* let c = std::env::current_dir().unwrap();
     let ck = c.join("problems/modules/ripgzip");
-    let file = File::open(ck.join("data/ok/09-concat.gz")).unwrap();
-    let output_file = File::create(ck.join("concat.pdf")).unwrap();
+    let file = File::open(ck.join("data/corrupted/08-bad-nlen.gz")).unwrap();
+    let output_file = File::create(ck.join("header")).unwrap();
     let res = decompress(BufReader::new(file), output_file);
     if res.is_err() {
         panic!("{}", res.unwrap_err())

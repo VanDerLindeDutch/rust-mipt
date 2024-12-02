@@ -3,7 +3,7 @@
 use std::io::{self, BufWriter, Write};
 
 use anyhow::{bail, Result};
-use crc::CRC_32_ISO_HDLC;
+use crc::{Digest, CRC_32_ISO_HDLC};
 ////////////////////////////////////////////////////////////////////////////////
 
 const HISTORY_SIZE: usize = 32768;
@@ -13,6 +13,8 @@ pub struct TrackingWriter<T: Write> {
     buf: [u8; HISTORY_SIZE],
     current_index: usize,
     buf_len: usize,
+    crc_32: Digest<'static, u32>,
+    length: usize
     // TODO: your code goes here.
 }
 
@@ -20,6 +22,8 @@ impl<T: Write> Write for TrackingWriter<T> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self.inner.write(buf) {
             Ok(v) => {
+                self.crc_32.update(buf);
+                self.length += buf.len();
                 for i in 0..v {
                     self.append_to_buf(buf[i]);
                 }
@@ -44,6 +48,8 @@ impl<T: Write> TrackingWriter<T> {
             buf: [0; HISTORY_SIZE],
             current_index: 0,
             buf_len: 0,
+            crc_32: X25.digest(),
+            length: 0,
         }
     }
 
@@ -58,11 +64,12 @@ impl<T: Write> TrackingWriter<T> {
         for i in 0..len {
             let i = (start_index+ i ) % HISTORY_SIZE;
             let b = self.buf[i % HISTORY_SIZE];
+
             vec_to_write.push(b);
             self.append_to_buf(b);
         }
-
-
+        self.crc_32.update(&vec_to_write);
+        self.length += vec_to_write.len();
         match self.inner.write(&vec_to_write) {
             Ok(v) => {
                 if v != len {
@@ -77,11 +84,11 @@ impl<T: Write> TrackingWriter<T> {
     }
 
     pub fn byte_count(&self) -> usize {
-        self.buf_len
+        self.length
     }
 
-    pub fn crc32(mut self) -> u32 {
-        X25.checksum(&self.buf[0..self.current_index])
+    pub fn crc32(self) -> u32 {
+        self.crc_32.finalize()
     }
 
     fn append_to_buf(&mut self, b: u8) {

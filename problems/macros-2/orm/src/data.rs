@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
-use std::{borrow::Cow, fmt};
-
+use std::{borrow::Cow};
+use std::any::{Any, TypeId};
 ////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
@@ -29,4 +29,52 @@ pub enum Value<'a> {
     Bool(bool),
 }
 
-// TODO: your code goes here.
+
+impl DataType {
+    pub fn from<T: 'static>() -> Self {
+
+        let t = TypeId::of::<T>();
+        match t {
+
+            _ if t == TypeId::of::<String>() => DataType::String,
+            _ if t == TypeId::of::<Vec<u8>>() => DataType::Bytes,
+            _ if t == TypeId::of::<i64>() => DataType::Int64,
+            _ if t == TypeId::of::<f64>() => DataType::Float64,
+            _ if t ==TypeId::of::<bool>() => DataType::Bool,
+            _ => {unimplemented!()}
+        }
+    }
+
+    pub fn sqllite_repr(&self) -> &str {
+        match self {
+            DataType::String => {
+                "TEXT"
+            }
+            DataType::Bytes => {
+                "BLOB"
+            }
+            DataType::Int64 => {
+                "BIGINT"
+            }
+            DataType::Float64 => {
+                "REAL"
+            }
+            DataType::Bool => {
+                "TINYINT"
+            }
+        }
+    }
+}
+
+impl PartialEq<Value<'_>> for DataType {
+    fn eq(&self, other: &Value) -> bool {
+        match (self, other) {
+            (DataType::String, Value::String(_)) => true,
+            (DataType::Bytes, Value::Bytes(_)) => true,
+            (DataType::Int64, Value::Int64(_)) => true,
+            (DataType::Float64, Value::Float64(_)) => true,
+            (DataType::Bool, Value::Bool(_)) => true,
+            (_, _) => false
+        }
+    }
+}

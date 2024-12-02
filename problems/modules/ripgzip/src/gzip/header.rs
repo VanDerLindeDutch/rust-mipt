@@ -3,7 +3,7 @@
 use std::fmt::Write;
 use std::io::BufRead;
 use anyhow::bail;
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use chrono::DateTime;
 use crc::Crc;
 use log::info;
@@ -47,7 +47,7 @@ impl MemberHeader {
             digest.update(&[0]);
         }
 
-        (digest.finalize() & 0xffff) as u16
+        ((digest.finalize()) & 0xffff) as u16
     }
 
     pub fn flags(&self) -> MemberFlags {
@@ -97,11 +97,11 @@ impl<T: BufRead, I: std::io::Write> crate::gzip::GzipReader<T, I> {
         let mut reader = &mut self.reader;
         let id1 = reader.read_bits(8)?;
         if id1.bits() != 0x1f {
-            bail!("id1 isn't correct")
+            bail!("wrong id values")
         }
         let id2 = reader.read_bits(8)?;
         if id2.bits() != 0x8b {
-            bail!("id2 isn't correct")
+            bail!("wrong id values")
         }
 
         let cm = reader.read_bits(8)?;
@@ -117,7 +117,7 @@ impl<T: BufRead, I: std::io::Write> crate::gzip::GzipReader<T, I> {
         }
         let mtime = reader.read_u32()?;
         let date = DateTime::from_timestamp(mtime as i64, 0).unwrap();
-
+       let q = date.to_string();
 
 
         let xf = reader.read_bits(8)?;
@@ -162,9 +162,15 @@ impl<T: BufRead, I: std::io::Write> crate::gzip::GzipReader<T, I> {
             out.comment = Some(comment);
         }
         if fhcrc.bits() == 1 {
-            let crc_16 = reader.borrow_reader_from_boundary().read_u16::<LittleEndian>()?;
-            info!("crc 16 is {}", crc_16);
             out.has_crc = true;
+            let crc_16 = reader.borrow_reader_from_boundary().read_u16::<LittleEndian>()?;
+            if crc_16 != out.crc16() {
+                bail!("header crc16 check failed")
+            }
+            info!("crc 16 is {}", crc_16);
+
+
+
         }
 
         // See RFC 1952, section 2.3.
@@ -172,18 +178,18 @@ impl<T: BufRead, I: std::io::Write> crate::gzip::GzipReader<T, I> {
         let flags = out.flags();
         Ok((out, flags))
     }
-}
 
-pub struct MemberReader<T> {
-    inner: T,
-}
-
-impl<T: BufRead> MemberReader<T> {
-    pub fn inner_mut(&mut self) -> &mut T {
-        &mut self.inner
+    pub(super) fn parse_footer(&mut self, length: usize, crc_32: u32) -> anyhow::Result<()> {
+        let mut reader = &mut self.reader;
+        let crc_from_footer =  reader.borrow_reader_from_boundary().read_u32::<LittleEndian>()?;
+        if crc_from_footer != crc_32 {
+            bail!("crc32 check failed")
+        }
+        let length_from_footer = reader.borrow_reader_from_boundary().read_u32::<LittleEndian>()?;
+        if length_from_footer as usize != length {
+            bail!("length check failed")
+        }
+        Ok(())
     }
-
-    pub fn read_footer<I: Write>(mut self) -> anyhow::Result<(MemberFooter, crate::gzip::GzipReader<T, I>)> {
-        unimplemented!()
-    }
 }
+

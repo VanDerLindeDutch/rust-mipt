@@ -9,6 +9,7 @@ use log::*;
 mod deflate;
 mod gzip;
 mod bit_reader;
+mod tracking_writer;
 
 pub fn decompress<R: BufRead, W: Write>(input: R, mut output: W) -> Result<()> {
     let mut gz = GzipReader::new(input);

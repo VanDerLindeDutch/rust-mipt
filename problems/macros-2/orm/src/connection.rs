@@ -17,6 +17,7 @@ impl StorageConnection for rusqlite::Connection {
 ////////////////////////////////////////////////////////////////////////////////
 
 pub struct Connection {
+
     inner: Box<dyn StorageConnection>,
 }
 

@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, parse_quote, Data, DeriveInput, Fields, FieldsNamed, GenericArgument, GenericParam, Generics, Ident, PathArguments, Type, TypePath};
+use syn::{parse_macro_input, Data, DeriveInput, Fields, PathArguments, Type, TypePath};
 
 #[proc_macro_derive(Scan)]
 pub fn derive_scan(input: TokenStream) -> TokenStream {

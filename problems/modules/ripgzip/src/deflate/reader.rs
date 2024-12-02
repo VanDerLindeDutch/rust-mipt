@@ -1,6 +1,6 @@
 use crate::bit_reader::BitReader;
 use crate::deflate::huffman_coding::{decode_litlen_distance_trees, DistanceToken, HuffmanCoding, LitLenToken};
-use crate::deflate::tracking_writer::TrackingWriter;
+use crate::tracking_writer::TrackingWriter;
 use crate::deflate::{BlockHeader, CompressionType};
 use anyhow::bail;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -58,7 +58,7 @@ impl DeflateReader {
                 let inner_input = bit_reader.borrow_reader_from_boundary();
                 let (len, nlen) = (inner_input.read_u16::<LittleEndian>()?, inner_input.read_u16::<LittleEndian>()?);
                 if len ^ 0xFFFF != nlen {
-                    bail!("incorrect len")
+                    bail!("nlen check failed")
                 }
                 for _ in 0..len {
                     writer.write_u8(bit_reader.read_bits(8)?.bits() as u8)?;
@@ -75,7 +75,7 @@ impl DeflateReader {
                 Ok(header.is_final)
             }
             CompressionType::Reserved => {
-                bail!("reserved type")
+                bail!("unsupported block type")
             }
         }
     }
