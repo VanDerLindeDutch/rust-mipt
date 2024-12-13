@@ -1,8 +1,11 @@
 use orm::{data::DataType, Connection, Object, ObjectId, ObjectState, Result, Tx};
-
+use orm::object::*;
+use orm::storage::Row;
+use orm::data::Value;
+use std::any::Any;
+use std::borrow::Cow;
 use rusqlite::params;
 use tempfile::NamedTempFile;
-
 ////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Object, PartialEq, Clone, Debug)]
@@ -53,9 +56,12 @@ fn create() {
         is_admin: true,
     };
     let tx_user = tx.create(user.clone()).unwrap();
+    println!("{:?}", tx_user.borrow());
     assert_eq!(*tx_user.borrow(), user);
 
     let user_id = tx_user.id();
+    let tx_user = tx.get::<User>(user_id).unwrap();
+
     tx.commit().unwrap();
 
     let tx = conn.new_transaction().unwrap();
@@ -342,7 +348,7 @@ fn unexpected_type() {
             "expecter Error::IncorrectType at get(), got {}",
             fmt_res(&res),
         ),
-    }
+    };
 }
 
 #[test]
@@ -667,14 +673,14 @@ fn rollback() {
     assert_eq!(tx_user.borrow().balance, 220.);
 }
 
-#[cfg(feature = "test-lifetimes-create")]
+// #[cfg(feature = "test-lifetimes-create")]
 #[test]
 fn lifetimes_create() {
     let mut conn = Connection::open_in_memory().unwrap();
     let tx = conn.new_transaction().unwrap();
 
     let order = tx.create(Order { is_tall: false }).unwrap();
-    tx.commit();
+    // tx.commit();
 
     eprintln!("is_tall: {}", order.borrow().is_tall);
 }

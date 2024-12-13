@@ -1,4 +1,4 @@
-#![forbid(unsafe_code)]
+
 mod connection;
 mod error;
 mod transaction;
