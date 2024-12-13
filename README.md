@@ -1,3 +1,4 @@
+finished: borrowing, intro, modules, std_collections, traits
 # The Rust Programming Language course
 
 Welcome to the Rust Programming Language course!
